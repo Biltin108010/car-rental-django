@@ -1,0 +1,77 @@
+python manage.py shell
+
+# Initialize Locations
+from rental.models import Location
+Location.initialize_locations()
+
+from django.contrib.auth.models import User
+
+users_data = [
+    {"username": "user1", "email": "user1@example.com", "password": "password123"},
+    {"username": "user2", "email": "user2@example.com", "password": "password123"},
+    {"username": "user3", "email": "user3@example.com", "password": "password123"},
+    {"username": "user4", "email": "user4@example.com", "password": "password123"},
+    {"username": "user5", "email": "user5@example.com", "password": "password123"},
+]
+
+for user_data in users_data:
+    if not User.objects.filter(username=user_data["username"]).exists():
+        User.objects.create_user(
+            username=user_data["username"],
+            email=user_data["email"],
+            password=user_data["password"]
+        )
+
+print(User.objects.all())
+
+from rental.models import Booking, Vehicle
+from datetime import datetime
+
+all_users = User.objects.all()
+all_vehicles = Vehicle.objects.all()
+all_locations = Location.objects.all()
+
+# Ensure there are enough users, vehicles, and locations
+if len(all_users) >= 5 and len(all_vehicles) >= 3 and len(all_locations) >= 6:
+    for i in range(10):
+        Booking.objects.create(
+            user=all_users[i % len(all_users)],
+            vehicle=all_vehicles[i % len(all_vehicles)],
+            pickup_location=all_locations[i % len(all_locations)],
+            dropoff_location=all_locations[(i + 1) % len(all_locations)],
+            start_date=datetime(2025, 2, 14, 10, 0),
+            end_date=datetime(2025, 2, 15, 18, 0),
+            status="confirmed"
+        )
+
+# Verify Bookings Exist
+print(Booking.objects.all())
+
+# Add Payments (8 Successful, 2 Failed)
+from rental.models import Payment
+all_bookings = Booking.objects.all()
+for i, booking in enumerate(all_bookings):
+    if not Payment.objects.filter(booking=booking).exists():
+        status = "successful" if i < 8 else "failed"
+        Payment.objects.create(booking=booking, amount=200.00 + (i * 50), status=status)
+
+# Retrieve Successful Payments
+print(Payment.objects.filter(status="successful"))
+
+# Retrieve Failed Payments
+print(Payment.objects.filter(status="failed"))
+
+# Get Average Sales of Successful Payments
+from django.db.models import Avg
+print(Payment.objects.filter(status="successful").aggregate(Avg("amount")))
+
+# Check Loyalty Points for a User
+from rental.models import LoyaltyProgram
+user = User.objects.first()
+print(LoyaltyProgram.objects.get(user=user).points)
+
+# Retrieve Notifications for a User
+from rental.models import Notification
+print(Notification.objects.filter(user=user).order_by("-created_at"))
+
+
